@@ -1,0 +1,569 @@
+{
+  "name": "AI Lead Generation Agent - FounDEV Studio",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b8c4c4c4-1234-4567-8901-123456789abc",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "business_name",
+              "value": "Smith Law Firm"
+            },
+            {
+              "name": "category", 
+              "value": "law"
+            },
+            {
+              "name": "city",
+              "value": "Chicago"
+            },
+            {
+              "name": "phone",
+              "value": "+1-555-0123"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-5678-9012-3456-789012345678",
+      "name": "Business Discovery",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.whoisxmlapi.com/whoisserver/WhoisService",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "2781b0c777f54159b6ae9328b91ea615"
+            },
+            {
+              "name": "domainName", 
+              "value": "={{ $json.business_name.toLowerCase().replace(/\\s+/g, '') }}.com"
+            },
+            {
+              "name": "outputFormat",
+              "value": "JSON"
+            }
+          ]
+        }
+      },
+      "id": "c2d3e4f5-6789-0123-4567-890123456789",
+      "name": "Website Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "boolean": [
+            {
+              "name": "hasWebsite",
+              "value": "={{ $json.WhoisRecord ? true : false }}"
+            }
+          ]
+        }
+      },
+      "id": "d3e4f5g6-7890-1234-5678-901234567890",
+      "name": "Set Website Flag",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.findymail.com/v1/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Be8fmCX3ve3ZetXVGHQUInlOccF62hiC41Ul4tB7df4db7da"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "company",
+              "value": "={{ $('Business Discovery').item.json.business_name }}"
+            },
+            {
+              "name": "domain",
+              "value": "={{ $('Business Discovery').item.json.business_name.toLowerCase().replace(/\\s+/g, '') }}.com"
+            }
+          ]
+        }
+      },
+      "id": "e4f5g6h7-8901-2345-6789-012345678901",
+      "name": "Email Discovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "email",
+              "value": "={{ $json.emails && $json.emails.length > 0 ? $json.emails[0].email : 'info@' + $('Business Discovery').item.json.business_name.toLowerCase().replace(/\\s+/g, '') + '.com' }}"
+            }
+          ]
+        }
+      },
+      "id": "f5g6h7i8-9012-3456-7890-123456789012",
+      "name": "Set Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "content": "Generate a personalized subject line for a web development outreach email to {{ $('Business Discovery').item.json.business_name }}, a {{ $('Business Discovery').item.json.category }} business in {{ $('Business Discovery').item.json.city }}. {{ $('Set Website Flag').item.json.hasWebsite ? 'They have a website.' : 'They don\\'t appear to have a website.' }} Make it compelling and relevant. Return only the subject line.",
+              "role": "user"
+            }
+          ]
+        }
+      },
+      "id": "g6h7i8j9-0123-4567-8901-234567890123",
+      "name": "Generate Subject Line",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "priority",
+              "value": "={{ ['law', 'medical', 'healthcare', 'finance', 'real estate'].includes($('Business Discovery').item.json.category.toLowerCase()) ? 'High Potential' : 'Standard' }}"
+            }
+          ]
+        }
+      },
+      "id": "h7i8j9k0-1234-5678-9012-345678901234",
+      "name": "Priority Tagging",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1560, 400]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "content": "Write a personalized outreach email for FounDEV Studio, a web agency. Details:\n- Business: {{ $('Business Discovery').item.json.business_name }}\n- Category: {{ $('Business Discovery').item.json.category }}\n- City: {{ $('Business Discovery').item.json.city }}\n- Has Website: {{ $('Set Website Flag').item.json.hasWebsite ? 'Yes' : 'No' }}\n\n{{ $('Set Website Flag').item.json.hasWebsite ? 'Focus on website optimization and modern updates.' : 'Focus on the importance of having a professional website.' }}\n\nTone: Professional, helpful, not pushy. Include specific benefits for their industry. End with a clear call-to-action for a free consultation. Sign as Alex from FounDEV Studio.",
+              "role": "user"
+            }
+          ]
+        }
+      },
+      "id": "i8j9k0l1-2345-6789-0123-456789012345",
+      "name": "Generate Email Content",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Set Email').item.json.email }}",
+        "subject": "={{ $('Generate Subject Line').item.json.message.content }}",
+        "message": "={{ $('Generate Email Content').item.json.message.content }}",
+        "senderName": "Alex - FounDEV Studio"
+      },
+      "id": "j9k0l1m2-3456-7890-1234-567890123456",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "business_name",
+              "value": "={{ $('Business Discovery').item.json.business_name }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $('Business Discovery').item.json.category }}"
+            },
+            {
+              "name": "city", 
+              "value": "={{ $('Business Discovery').item.json.city }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Business Discovery').item.json.phone }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Set Email').item.json.email }}"
+            },
+            {
+              "name": "subject_line",
+              "value": "={{ $('Generate Subject Line').item.json.message.content }}"
+            },
+            {
+              "name": "priority",
+              "value": "={{ $('Priority Tagging').item.json.priority }}"
+            },
+            {
+              "name": "email_sent_date",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "replied",
+              "value": "false"
+            },
+            {
+              "name": "follow_up_sent",
+              "value": "false"
+            }
+          ],
+          "boolean": [
+            {
+              "name": "hasWebsite",
+              "value": "={{ $('Set Website Flag').item.json.hasWebsite }}"
+            }
+          ]
+        }
+      },
+      "id": "k0l1m2n3-4567-8901-2345-678901234567",
+      "name": "Log Lead Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "unit": "days",
+        "amount": 3
+      },
+      "id": "l1m2n3o4-5678-9012-3456-789012345678",
+      "name": "Wait 3 Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "content": "Write a follow-up email for {{ $('Log Lead Data').item.json.business_name }}, a {{ $('Log Lead Data').item.json.category }} business in {{ $('Log Lead Data').item.json.city }}. Reference that we reached out a few days ago about web development services. Keep it brief, friendly, and offer a specific value proposition. Mention a free website audit. Sign as Alex from FounDEV Studio.",
+              "role": "user"
+            }
+          ]
+        }
+      },
+      "id": "q6r7s8t9-0123-4567-8901-234567890123",
+      "name": "Generate Follow-up",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Log Lead Data').item.json.email }}",
+        "subject": "Re: {{ $('Log Lead Data').item.json.subject_line }}",
+        "message": "={{ $('Generate Follow-up').item.json.message.content }}",
+        "senderName": "Alex - FounDEV Studio"
+      },
+      "id": "r7s8t9u0-1234-5678-9012-345678901234",
+      "name": "Send Follow-up",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [2880, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "follow_up_sent",
+              "value": "true"
+            },
+            {
+              "name": "follow_up_date",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "s8t9u0v1-2345-6789-0123-456789012345",
+      "name": "Update Follow-up Status",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [3100, 300]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "readStatus": "unread"
+        }
+      },
+      "id": "m2n3o4p5-6789-0123-4567-890123456789",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [240, 600]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "reply_from",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "reply_subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "reply_date",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "n3o4p5q6-7890-1234-5678-901234567890",
+      "name": "Process Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "channel": "#leads",
+        "text": "🎉 New reply received!\n📧 From: {{ $json.reply_from }}\n📝 Subject: {{ $json.reply_subject }}\n⏰ Time: {{ $json.reply_date }}"
+      },
+      "id": "p5q6r7s8-9012-3456-7890-123456789012",
+      "name": "Slack Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [680, 600]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Business Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Discovery": {
+      "main": [
+        [
+          {
+            "node": "Website Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Website Check": {
+      "main": [
+        [
+          {
+            "node": "Set Website Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Website Flag": {
+      "main": [
+        [
+          {
+            "node": "Email Discovery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Discovery": {
+      "main": [
+        [
+          {
+            "node": "Set Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Email": {
+      "main": [
+        [
+          {
+            "node": "Generate Subject Line",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Priority Tagging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Subject Line": {
+      "main": [
+        [
+          {
+            "node": "Generate Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Priority Tagging": {
+      "main": [
+        [
+          {
+            "node": "Generate Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Log Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Days": {
+      "main": [
+        [
+          {
+            "node": "Generate Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Update Follow-up Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Reply": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "id": "1",
+  "meta": {
+    "instanceId": "12345"
+  },
+  "tags": []
+}
